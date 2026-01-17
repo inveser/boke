@@ -8,7 +8,7 @@
   <!-- 字体 -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
-  <!-- Chart.js（图表库） -->
+  <!-- 图表库 -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -56,6 +56,31 @@
       color: #cfd3da;
     }
 
+    textarea {
+      width: 100%;
+      background: #171a21;
+      color: #e6e6e6;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 10px;
+      background: #4f8cff;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
     footer {
       text-align: center;
       color: #666;
@@ -78,23 +103,23 @@
       <p>投资笔记 · 复盘 · 长期主义</p>
     </header>
 
+    <!-- 投资回报率图表 -->
     <section>
-      <h2>📈 投资回报率曲线</h2>
+      <h2>📈 投资回报率</h2>
       <canvas id="returnChart" height="120"></canvas>
     </section>
 
+    <!-- 新建笔记 -->
     <section>
-      <h2>📝 投资笔记</h2>
+      <h2>✍️ 新建笔记</h2>
+      <textarea id="noteInput" rows="4" placeholder="记录当下判断、仓位、情绪..."></textarea>
+      <button onclick="submitNote()">保存</button>
+    </section>
 
-      <div class="note">
-        <strong>2026-01</strong><br>
-        这是一条示例笔记。可以记录当下的判断、情绪、仓位变化，以及事后复盘。
-      </div>
-
-      <div class="note">
-        <strong>原则</strong><br>
-        控制回撤比追求收益更重要，系统优先于情绪。
-      </div>
+    <!-- 历史笔记 -->
+    <section>
+      <h2>📒 历史笔记</h2>
+      <div id="notes"></div>
     </section>
 
     <footer>
@@ -103,39 +128,75 @@
   </div>
 
   <script>
-    const ctx = document.getElementById('returnChart');
+    /* ====== 配置区（你只需要改这里） ====== */
+    const API = "http://你的VPSIP:5000/notes";
+    const TOKEN = "baby-secret-token";
 
-    // 👉 你只需要改这里的数据
+    /* ====== 图表数据 ====== */
     const labels = ['起始', '第1月', '第2月', '第3月', '第4月'];
-    const returns = [0, 5, -3, 12, 18]; // 单位：%
+    const returns = [0, 5, -3, 12, 18]; // %
 
+    const ctx = document.getElementById('returnChart');
     new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
         datasets: [{
-          label: '累计回报率 (%)',
           data: returns,
           borderColor: '#4f8cff',
-          backgroundColor: 'rgba(79, 140, 255, 0.15)',
+          backgroundColor: 'rgba(79,140,255,0.15)',
           fill: true,
           tension: 0.35
         }]
       },
       options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false }
-        },
+        plugins: { legend: { display: false } },
         scales: {
           y: {
             ticks: {
-              callback: value => value + '%'
+              callback: v => v + '%'
             }
           }
         }
       }
     });
+
+    /* ====== 笔记逻辑 ====== */
+    function loadNotes() {
+      fetch(API)
+        .then(r => r.json())
+        .then(data => {
+          const box = document.getElementById("notes");
+          box.innerHTML = "";
+          data.forEach(n => {
+            box.innerHTML += `
+              <div class="note">
+                <strong>${n.time}</strong><br>
+                ${n.content}
+              </div>
+            `;
+          });
+        });
+    }
+
+    function submitNote() {
+      const content = document.getElementById("noteInput").value.trim();
+      if (!content) return;
+
+      fetch(API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Token": TOKEN
+        },
+        body: JSON.stringify({ content })
+      }).then(() => {
+        document.getElementById("noteInput").value = "";
+        loadNotes();
+      });
+    }
+
+    loadNotes();
   </script>
 </body>
 </html>
